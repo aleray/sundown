@@ -527,6 +527,7 @@ parse_emph2(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t size
 
 	render_method = (c == '~') ? rndr->cb.strikethrough : rndr->cb.double_emphasis;
 	render_method = (c == '+') ? rndr->cb.ins : render_method;
+	render_method = (c == '%') ? rndr->cb.semantic_data : render_method;
 
 	if (!render_method)
 		return 0;
@@ -601,7 +602,7 @@ char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 		/* whitespace cannot follow an opening emphasis;
 		 * ins only takes two characters '++'
 		 * strikethrough only takes two characters '~~' */
-		if (c == '+' || c == '~' || _isspace(data[1]) || (ret = parse_emph1(ob, rndr, data + 1, size - 1, c)) == 0)
+		if (c == '%' || c == '+' || c == '~' || _isspace(data[1]) || (ret = parse_emph1(ob, rndr, data + 1, size - 1, c)) == 0)
 			return 0;
 
 		return ret + 1;
@@ -615,7 +616,7 @@ char_emphasis(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 	}
 
 	if (size > 4 && data[1] == c && data[2] == c && data[3] != c) {
-		if (c == '+' || c == '~' || _isspace(data[3]) || (ret = parse_emph3(ob, rndr, data + 3, size - 3, c)) == 0)
+		if (c == '%' || c == '+' || c == '~' || _isspace(data[3]) || (ret = parse_emph3(ob, rndr, data + 3, size - 3, c)) == 0)
 			return 0;
 
 		return ret + 3;
@@ -687,7 +688,7 @@ char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 static size_t
 char_escape(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t offset, size_t size)
 {
-	static const char *escape_chars = "\\`*_{}[]()#+-.!:|&<>^~";
+	static const char *escape_chars = "\\`*_{}[]()#+-.!:|&<>^%~";
 	struct buf work = { 0, 0, 0, 0 };
 
 	if (size > 1) {
@@ -2419,6 +2420,8 @@ sd_markdown_new(
 			md->active_char['~'] = MD_CHAR_EMPHASIS;
 		if (extensions & MKDEXT_INS)
 			md->active_char['+'] = MD_CHAR_EMPHASIS;
+		if (extensions & MKDEXT_SEMANTIC_DATA)
+			md->active_char['%'] = MD_CHAR_EMPHASIS;
 	}
 
 	if (md->cb.codespan)

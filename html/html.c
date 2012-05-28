@@ -170,6 +170,18 @@ rndr_codespan(struct buf *ob, const struct buf *text, void *opaque)
 }
 
 static int
+rndr_semantic_data(struct buf *ob, const struct buf *text, void *opaque)
+{
+	if (!text || !text->size)
+		return 0;
+
+	BUFPUTSL(ob, "<span>");
+	bufput(ob, text->data, text->size);
+	BUFPUTSL(ob, "</span>");
+	return 1;
+}
+
+static int
 rndr_ins(struct buf *ob, const struct buf *text, void *opaque)
 {
 	if (!text || !text->size)
@@ -579,6 +591,7 @@ sdhtml_toc_renderer(struct sd_callbacks *callbacks, struct html_renderopt *optio
 		rndr_ins,
 		rndr_strikethrough,
 		rndr_superscript,
+		rndr_semantic_data,
 
 		NULL,
 		NULL,
@@ -621,6 +634,7 @@ sdhtml_renderer(struct sd_callbacks *callbacks, struct html_renderopt *options, 
 		rndr_ins,
 		rndr_strikethrough,
 		rndr_superscript,
+		rndr_semantic_data,
 
 		NULL,
 		rndr_normal_text,

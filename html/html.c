@@ -169,15 +169,104 @@ rndr_codespan(struct buf *ob, const struct buf *text, void *opaque)
 	return 1;
 }
 
+/*
+ * Parses semantic data
+ */
+static int
+get_tokens(char *source, char **ns, char **prop, char **content, char **label)
+{
+    char *delimiter = NULL;
+    char *str = source;
+    
+    *ns = NULL;
+    *prop = NULL;
+    *content = NULL;
+    *label = NULL;
+    
+    /* find the first delimiter */
+    delimiter = strstr(str, ":");
+    if (!delimiter)
+        return 0;
+    
+    /* null terminate the delimiter to create a valid C string for the 
+     * namespace */
+    *delimiter = '\0';
+    *ns = str;
+    
+    /* move the search start point past the initial ":" */
+    str = delimiter + 1;
+    
+    delimiter = strstr(str, "::");
+    if (!delimiter)
+        return 0;
+    
+    /* null terminate the delimiters to create a valid C string for the
+     * property string */
+    *delimiter = '\0';
+    *(delimiter + 1) = '\0';
+    *prop = str;
+    
+    /* move the starting point past "::" */
+    str = delimiter + 2;
+    /* verify that there is some content and/or label past the "::" delimiter */
+    if (strlen(str) < 1)
+        return 0;
+    
+    /* there was some content, and potentially a label found */
+    *content = str;
+
+    /* if there is no pipe delimiter, then the remainder of the string is the
+     * content */
+    delimiter = strstr(str, "|");
+    if (!delimiter)
+        return 1;
+    
+    /* if there is a pipe delimiter, null terminate the content string and the
+     * remainder is the label */
+    *delimiter = '\0';
+    str = delimiter + 1;
+    
+    /* make sure there is are some characters beyond the pipe delimiter */
+    if (strlen(str) > 0)
+        *label = str;
+    
+    return 1;
+}
+
 static int
 rndr_semantic_data(struct buf *ob, const struct buf *text, void *opaque)
 {
+    char *namespace;
+    char *property;
+    char *content;
+    char *label;
+    
 	if (!text || !text->size)
 		return 0;
 
-	BUFPUTSL(ob, "<span>");
-	bufput(ob, text->data, text->size);
-	BUFPUTSL(ob, "</span>");
+    get_tokens((char *)text->data, &namespace, &property, &content, &label);
+
+    BUFPUTSL(ob, "<span");
+    if (namespace && property) {
+        BUFPUTSL(ob, " property=\"");
+        bufput(ob, namespace, strlen(namespace));
+        BUFPUTSL(ob, ":");
+        bufput(ob, property, strlen(property));
+        BUFPUTSL(ob, "\"");
+    }
+    if (content) {
+        BUFPUTSL(ob, " content=\"");
+        bufput(ob, content, strlen(content));
+        BUFPUTSL(ob, "\"");
+    }
+    BUFPUTSL(ob, ">");
+    if (label) {
+        bufput(ob, label, strlen(label));
+    } else if (content) {
+        bufput(ob, content, strlen(content));
+    }
+    BUFPUTSL(ob, "</span>");
+
 	return 1;
 }
 
